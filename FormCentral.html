@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#244a3e; --ink-2:#3c6b5d; --muted:#7ea094; --bg:#f6fbf9; --card:#ffffff;
+      --ring:#dfe9e5; --ring-strong:#cfe3dc; --pill:#edf7f2; --accent:#3cb579; --accent-2:#1e8f5c;
+      --danger:#e74c3c; --danger-bg:#fbe9e8; --shadow:0 20px 50px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{
+      margin:0; background:radial-gradient(1100px 700px at 8% -10%,rgba(60,181,121,.10),transparent 40%), var(--bg);
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:var(--ink);
+    }
+    .shell{max-width:1080px; margin:26px auto 48px; padding:0 18px}
+    .card{background:#fff; border:1px solid var(--ring); border-radius:26px; box-shadow:var(--shadow); padding:32px 32px 24px;}
+    
+    h1{margin:6px 0 8px; text-align:center; font-weight:800; letter-spacing:.2px; font-size:36px; color:var(--ink);}
+    .sub{text-align:center; color:var(--muted); margin:0 0 28px; font-weight:600;}
+    .dash{border:0; border-top:2px dotted #9db9ae44; margin:24px 0}
+    .h5{font-size:18px; font-weight:800; color:var(--ink-2); margin:0 0 8px}
+
+    /* Inputs */
+    .row-search{display:flex; gap:12px; flex-wrap:wrap}
+    .field{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--ring); border-radius:14px; padding:13px 14px; box-shadow: inset 0 2px 0 rgba(255,255,255,.7); flex:1; min-width:260px;}
+    .pill{flex:1; border:0; outline:0; font-size:16px; background:transparent; color:var(--ink);}
+    .pill::placeholder{color:#b7c9c3}
+
+    /* Inputs de Edición */
+    .edit-label { font-size: 0.75rem; color: #2d5b4f; font-weight: 700; display: block; margin-bottom: 4px; }
+    .edit-input {
+        border: 1px solid #ccc; background: #fff; border-radius: 8px;
+        padding: 6px 10px; font-size: 0.95rem; color: var(--ink); font-weight: 600;
+        width: 100%; outline: none; transition: border-color 0.2s;
+    }
+    .edit-input:focus { border-color: var(--accent); }
+
+    /* Botones */
+    .cta{display:inline-block; border:none; border-radius:12px; padding:14px 24px; font-weight:700; font-size:1rem; background:linear-gradient(180deg, var(--accent), var(--accent-2)); color:#fff; box-shadow:0 10px 24px rgba(60,181,121,.25); cursor:pointer; text-align:center; transition:transform .1s;}
+    .cta:active{transform:scale(0.98)}
+    .cta[disabled]{opacity:.65; cursor:not-allowed}
+    .cta-wide{ display:block; width:100%; margin:18px auto 0; }
+    .cta-danger{ background:linear-gradient(135deg, #ff7675, #d63031); color: #fff; border: none; border-radius: 50px; padding: 10px 24px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(214, 48, 49, 0.3); text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    /* Botón Guardar */
+    .cta-save {
+        background: var(--ink); color: #fff; border: none; border-radius: 8px;
+        padding: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+        margin-top: 12px; width: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+        transition: background 0.2s;
+    }
+    .cta-save:hover { background: var(--ink-2); }
+
+    .hint{margin-top:8px; text-align:center; font-weight:700; color:#3c6b5d}
+    .hint.err{color:#d64536}
+    .hint.ok{color:#1e8f5c; font-size: 1.1rem;} 
+
+    /* Listas y Tarjetas */
+    .list{display:grid; gap:12px; margin-top:10px}
+    .card-sm{border:2px solid var(--ring-strong); background:#fff; border-radius:16px; padding:12px 14px; box-shadow:0 12px 28px rgba(0,0,0,.05);}
+    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between}
+    .pill-info{background:var(--pill); padding:4px 10px; border-radius:8px; font-weight:700; font-size:0.9rem; color:var(--ink-2);}
+
+    /* Paneles Resumen */
+    .duo{display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:10px;}
+    @media (max-width:860px){ .duo{grid-template-columns:1fr} }
+    
+    .panel{ background:rgba(60,181,121,.06); border:1px solid #cfe3dc; border-radius:22px; padding:20px 24px; position:relative; }
+    .panel-left .item{ margin-bottom: 12px; }
+    .panel-left .label{ font-weight: 700; color: var(--ink-2); margin-right: 8px; }
+
+    .panel-right{display:flex; flex-direction:column; justify-content:center; text-align:center; background:#fff; border:2px solid var(--accent); box-shadow:0 10px 30px rgba(60,181,121,.15);}
+    .refresh-link{ position:absolute; top:12px; right:16px; font-size:0.85rem; font-weight:700; color:var(--accent-2); cursor:pointer; background:var(--pill); padding:4px 10px; border-radius:20px; transition:background .2s;}
+    .refresh-link:hover{background:#dbece5;}
+    
+    .t-title{font-size:1rem; font-weight:700; color:#7ea094; text-transform:uppercase; letter-spacing:1px;}
+    .t-money{font-size:3.5rem; font-weight:800; line-height:1; color:var(--ink); margin:4px 0;}
+    .t-rest{font-size:1.2rem; font-weight:700; color:#e0433e; background:#fbe9e8; display:inline-block; margin:8px auto 0; padding:4px 16px; border-radius:20px;}
+
+    /* Tabla */
+    .table-wrap{ overflow-x:auto; border-radius:18px; border:1px solid var(--ring); margin-top:10px;}
+    table{ width:100%; border-collapse:collapse; min-width:600px; }
+    th{ text-align:left; color:#7ea094; font-size:.85rem; padding:14px 18px; background:#fbfdfc; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;}
+    td{ background:#fff; padding:14px 18px; border-top:1px solid var(--ring); font-weight:600; color:var(--ink); font-size:0.95rem; vertical-align: middle;}
+    tr:last-child td{border-bottom:none;}
+
+    /* Modales y Overlays */
+    .toast-center{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999; pointer-events:none;}
+    .toast-center.show{display:flex; animation:fadeIn .15s ease}
+    .toast-center::before{content:""; position:absolute; inset:0; background:rgba(36,74,62,.12); backdrop-filter:blur(2px)}
+    .toast-card{position:relative; pointer-events:auto; display:flex; align-items:center; gap:.6rem; background:#fff; border:2px solid var(--ring-strong); border-radius:18px; padding:1rem 1.2rem; font-weight:800; color:#3c6b5d; box-shadow:var(--shadow); max-width:min(88vw,600px)}
+    .toast-card.error{border-color:#fecaca; color:#b91c1c}
+
+    #loginOverlay, #modalConfirm { position: fixed; inset: 0; background: #f6fbf9; z-index: 10000; display: flex; align-items: center; justify-content: center; }
+    #modalConfirm { background: rgba(36, 74, 62, 0.5); backdrop-filter: blur(3px); z-index: 13000; display: none; }
+
+    .login-card { background: #fff; padding: 40px; border-radius: 26px; box-shadow: var(--shadow); border: 1px solid var(--ring); width: 90%; max-width: 400px; text-align: center; }
+    
+    .modal-card { background: #fff; border-radius: 24px; padding: 32px; max-width: 380px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+
+    .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .user-badge { font-weight:700; color:var(--accent-2); background:var(--pill); padding:5px 12px; border-radius:20px; font-size:0.9rem;}
+    .btn-logout { background:none; border:none; color:#7ea094; font-weight:600; cursor:pointer; font-size:0.85rem; text-decoration:underline;}
+
+    @keyframes fadeIn{from{opacity:0} to{opacity:1}}
+  </style>
+</head>
+<body>
+
+  <div id="loginOverlay">
+    <div class="login-card">
+      <h1>Iniciar Sesión</h1>
+      <p class="sub">Ingresa tu clave de asesor</p>
+      <div class="field" style="margin-bottom:20px;">
+        <input id="loginPwd" type="password" class="pill" placeholder="Contraseña..." style="text-align:center">
+      </div>
+      <button id="btnLogin" class="cta" style="width:100%">Ingresar</button>
+      <div id="loginMsg" class="hint"></div>
+    </div>
+  </div>
+
+  <div class="shell" id="appShell" style="display:none">
+    <div class="card">
+      
+      <div class="top-bar">
+        <span id="asesorDisplay" class="user-badge">Hola, Asesor</span>
+        <button id="btnLogout" class="btn-logout">Salir</button>
+      </div>
+
+      <h1 style="color:#2d5b4f; text-transform:uppercase;">CENTRAL DE NÚMEROS</h1>
+      <p class="sub">Gestión y auditoría de APARMENTO</p>
+
+      <div class="h5">Buscar Boleta o Teléfono</div>
+      <div class="row-search">
+        <div class="field"><input id="c_buscar" class="pill" type="text" placeholder="Ej: 4190 o 5731XXXXXXXX"></div>
+        <button id="btnBuscar" class="cta" style="min-width:140px;">Buscar</button>
+      </div>
+      <div id="fbBuscar" class="hint"></div>
+      
+      <div id="listMulti" class="list" style="display:none"></div>
+
+      <hr class="dash">
+
+      <div id="resumenWrap" style="display:none">
+        <div class="duo">
+          <div class="panel panel-left">
+            
+            <div class="item"><span class="label">Boleta:</span><span id="r_boleta" style="font-weight:800; font-size:1.2rem;">—</span></div>
+            
+            <div style="margin-bottom:10px;">
+                <label class="edit-label">Nombre:</label>
+                <input id="edit_nombre" type="text" class="edit-input">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label class="edit-label">Apellido:</label>
+                <input id="edit_apellido" type="text" class="edit-input">
+            </div>
+            <div style="margin-bottom:10px;">
+                <label class="edit-label">Ciudad:</label>
+                <input id="edit_ciudad" type="text" class="edit-input">
+            </div>
+            
+            <div class="item"><span class="label">Teléfono:</span><span id="r_tel">—</span></div>
+
+            <button id="btnGuardarCambios" class="cta-save">💾 Guardar Cambios</button>
+
+          </div>
+          
+          <div class="panel panel-right">
+            <div id="lnkRefrescar" class="refresh-link" title="Actualizar abonos">🔄 Refrescar</div>
+            <div class="t-title">Total Abonado</div>
+            <div id="r_total" class="t-money">$ 0</div>
+            <div class="t-rest">Restante:<span id="r_restante" class="val" style="margin-left:6px">$ 0</span></div>
+          </div>
+        </div>
+        <button id="btnCopiar" class="cta cta-wide">Copiar Enlace de Boleta Digital</button>
+      </div>
+
+      <hr class="dash" id="sepAbonos" style="display:none">
+
+      <div id="abonosWrap" style="display:none">
+        <div class="h5">Historial de Abonos</div>
+        <div id="fbAbonos" class="hint"></div>
+        
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Valor</th>
+                <th>Referencia</th>
+                <th>Método</th>
+                <th style="text-align:center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tblAbonos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <hr class="dash" id="sepLiberar" style="display:none">
+
+      <div id="libWrap" style="display:none; background:#fff5f5; border:2px dashed #fecaca; border-radius:20px; padding:20px; text-align:center;">
+        <div class="h5" style="color:#c53030">Zona de Liberación</div>
+        <p style="font-size:0.9rem; color:#c53030; margin-bottom:14px;">Esta acción borrará la venta y todos sus abonos asociados. El número quedará disponible.</p>
+        <input id="c_pwd" type="hidden"> 
+        <button id="btnLiberar" class="cta cta-danger" style="margin:0 auto; display:inline-block;">Liberar Número</button>
+        <div id="fbLiberar" class="hint"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toastCenter" class="toast-center" aria-live="assertive">
+    <div class="toast-card" id="toastCard" role="alert">
+      <span id="toastIcon">✅</span>
+      <span id="toastMsg">Listo</span>
+    </div>
+  </div>
+
+  <div id="modalConfirm">
+    <div class="modal-card">
+        <span style="font-size: 3.5rem; display: block; margin-bottom: 12px;">🗑️</span>
+        <div style="font-size: 1.3rem; font-weight: 800; color: #c0392b; margin-bottom: 10px;">¿Estás seguro?</div>
+        <p style="color: #5a7a70; font-size: 0.95rem; line-height: 1.5; margin-bottom: 24px;">Vas a eliminar este abono permanentemente. La transferencia asociada quedará libre.</p>
+        
+        <div style="display: flex; gap: 12px; justify-content: center;">
+           <button id="btnCancelConfirm" class="cta" style="background: #f3f4f6; color: #4b5563; box-shadow: none; width: auto; margin: 0; padding: 10px 20px; font-size: 0.9rem;">Cancelar</button>
+           <button id="btnOkConfirm" class="cta-danger" style="width: auto; margin: 0; padding: 10px 24px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);">Sí, Eliminar</button>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    const $$ = s => document.querySelector(s);
+    const $all = s => Array.from(document.querySelectorAll(s));
+
+    // ===== LOGIN =====
+    const STORAGE_KEY = 'asesor_pwd';
+    const STORAGE_NAME = 'asesor_name';
+
+    function initLogin(){
+      const savedPwd = localStorage.getItem(STORAGE_KEY);
+      if(savedPwd){ verificarCredenciales(savedPwd, true); } 
+      else { mostrarLogin(); }
+    }
+    function mostrarLogin(){
+      $$('#loginOverlay').style.display = 'flex';
+      $$('#appShell').style.display = 'none';
+      $$('#loginPwd').value = ''; $$('#loginPwd').focus();
+    }
+    function ocultarLogin(nombre){
+      $$('#loginOverlay').style.display = 'none';
+      $$('#appShell').style.display = 'block';
+      $$('#asesorDisplay').textContent = 'Hola, ' + (nombre || 'Asesor');
+      $$('#c_pwd').value = localStorage.getItem(STORAGE_KEY);
+    }
+    function verificarCredenciales(pwd, auto=false){
+      if(!pwd && !auto) { setHint('#loginMsg', 'Escribe tu contraseña', true); return; }
+      if(!auto) { $$('#btnLogin').textContent = 'Verificando...'; $$('#btnLogin').disabled = true; }
+
+      google.script.run
+        .withSuccessHandler(res => {
+          if(!auto) { $$('#btnLogin').textContent = 'Ingresar'; $$('#btnLogin').disabled = false; }
+          if(res.valido){
+            localStorage.setItem(STORAGE_KEY, pwd);
+            localStorage.setItem(STORAGE_NAME, res.nombre);
+            ocultarLogin(res.nombre);
+          } else {
+            if(auto) { mostrarLogin(); } else { setHint('#loginMsg', 'Contraseña incorrecta', true); }
+          }
+        })
+        .withFailureHandler(err => {
+          if(!auto) { $$('#btnLogin').textContent = 'Ingresar'; $$('#btnLogin').disabled = false; setHint('#loginMsg', 'Error de conexión', true); }
+        })
+        .verificarCredencialesAsesor(pwd);
+    }
+    $$('#btnLogin').addEventListener('click', () => verificarCredenciales($$('#loginPwd').value));
+    $$('#loginPwd').addEventListener('keydown', (e) => { if(e.key === 'Enter') $$('#btnLogin').click(); });
+    $$('#btnLogout').addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(STORAGE_NAME); location.reload();
+    });
+    // =================
+
+    function showToast(msg, type='ok'){
+      const overlay=$$('#toastCenter'), card=$$('#toastCard');
+      $$('#toastIcon').textContent = type==='error' ? '⚠️' : '✅';
+      card.classList.toggle('error', type==='error');
+      $$('#toastMsg').textContent = msg;
+      overlay.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(()=>overlay.classList.remove('show'), 2200);
+    }
+    function setHint(sel, msg, err=false){
+      const el = typeof sel==='string' ? $$(sel) : sel;
+      el.textContent = msg || '';
+      el.classList.remove('err', 'ok');
+      if(err) el.classList.add('err');
+    }
+    function setOkHint(sel, msg){
+      const el = typeof sel==='string' ? $$(sel) : sel;
+      el.textContent = msg;
+      el.classList.remove('err');
+      el.classList.add('ok');
+    }
+
+    function formatoCOP(n){ return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(Number(n)||0); }
+
+    function gasPositional(fnName, argsArr, {timeoutMs=15000, onSuccess, onError, onTimeout}={}){
+      let done = false;
+      const t = setTimeout(()=>{ if(done) return; done=true; onTimeout && onTimeout(); }, timeoutMs);
+      try{
+        let call = google.script.run;
+        call = call.withSuccessHandler(res=>{ if(done) return; done=true; clearTimeout(t); onSuccess && onSuccess(res); });
+        call = call.withFailureHandler(err=>{ if(done) return; done=true; clearTimeout(t); onError && onError(err); });
+        call[fnName].apply(null, argsArr || []);
+      }catch(e){
+        if(done) return;
+        done=true; clearTimeout(t);
+        onError && onError(e);
+      }
+    }
+
+    let seleccionado = null; 
+
+    // ===== MODAL CONFIRMACIÓN LÓGICA =====
+    const modalConf = document.getElementById('modalConfirm');
+    const btnCancel = document.getElementById('btnCancelConfirm');
+    const btnOk     = document.getElementById('btnOkConfirm');
+    let accionConfirmada = null;
+
+    if(btnCancel && btnOk){
+        btnCancel.addEventListener('click', () => {
+           modalConf.style.display = 'none';
+           accionConfirmada = null;
+        });
+        btnOk.addEventListener('click', () => {
+           if (accionConfirmada) accionConfirmada();
+           modalConf.style.display = 'none';
+        });
+    }
+
+    function pedirConfirmacion(callback) {
+       if(!modalConf) return;
+       accionConfirmada = callback;
+       modalConf.style.display = 'flex';
+    }
+    // =====================================
+
+    // Buscar
+    $$('#c_buscar').addEventListener('keydown', (e)=>{ if(e.key==='Enter') $$('#btnBuscar').click(); });
+    // BUSCAR (Lógica Inteligente: Boleta vs Teléfono vs NS)
+    $$('#btnBuscar').addEventListener('click', ()=>{
+      const raw = $$('#c_buscar').value.trim();
+      if(!raw){ setHint('#fbBuscar','Escribe algo para buscar.', true); return; }
+
+      // Limpiar UI
+      $$('#listMulti').style.display='none'; $$('#listMulti').innerHTML='';
+      $$('#resumenWrap').style.display='none';
+      $$('#abonosWrap').style.display='none'; $$('#sepAbonos').style.display='none';
+      $$('#libWrap').style.display='none'; $$('#sepLiberar').style.display='none';
+      setHint('#fbLiberar','');
+
+      const btn = $$('#btnBuscar'); const old = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Buscando…';
+      setHint('#fbBuscar','');
+
+      // --- DETECCIÓN DEL TIPO DE BÚSQUEDA ---
+      let payload = {};
+      
+      // 1. Si tiene letras, asumimos que es un NS (Ej: "f1599...")
+      if (/[a-zA-Z]/.test(raw)) {
+         payload = { nsUsuario: raw };
+      } 
+      // 2. Si son solo números...
+      else {
+         const digits = raw.replace(/\D+/g,'');
+         // Si son exactamente 4 dígitos, es BOLETA
+         if (digits.length === 4) {
+            payload = { numeroBoleta: digits };
+         } 
+         // Si son más (ej. 10 dígitos), es TELÉFONO
+         else {
+            payload = { telefono: digits };
+         }
+      }
+
+      gasPositional('handleGetRequest', [payload], {
+        onSuccess:(res)=>{
+          btn.disabled=false; btn.textContent=old;
+          
+          if(!res || !res.status){ setHint('#fbBuscar','Respuesta inesperada.', true); showToast('Error','error'); return; }
+          
+          // CASO 1: VENDIDO (Encontrado único)
+          if(res.status==='encontrado'){
+            seleccionado = res.datos;
+            pintarResumen(seleccionado);
+            cargarAbonos(seleccionado.numero);
+            return;
+          }
+
+          // CASO 2: DISPONIBLE
+          if(res.status==='disponible'){
+            const numFormateado = String(res.numero).padStart(4, '0');
+            setOkHint('#fbBuscar', `¡El número ${numFormateado} está DISPONIBLE!`);
+            return;
+          }
+
+          // CASO 3: NO INVENTARIO / NO EXISTE
+          if(res.status==='noInventario' || res.status==='noExiste'){
+            setHint('#fbBuscar', `No se encontró información para "${raw}".`, true);
+            return;
+          }
+
+          // CASO 4: MULTIPLES (Lista de resultados)
+          if(res.status==='multiples'){
+            setHint('#fbBuscar',`Se encontraron ${res.lista.length} boletas asociadas:`);
+            const html = res.lista
+              .sort((a,b)=>Number(a.numero)-Number(b.numero))
+              .map((d,i)=>`
+                <div class="card-sm">
+                  <div class="row">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <span class="pill-info">Boleta: ${String(d.numero).padStart(4,'0')}</span>
+                      <span class="pill-info">Cliente: ${d.nombre||'—'}</span>
+                      <span class="pill-info">NS: ${d.nsUsuario || '—'}</span>
+                    </div>
+                    <button class="cta" data-i="${i}" style="min-width:auto; padding:8px 16px; margin:0">Seleccionar</button>
+                  </div>
+                </div>
+              `).join('');
+            $$('#listMulti').innerHTML = html;
+            $$('#listMulti').style.display='block';
+            $$('#listMulti').querySelectorAll('button[data-i]').forEach((b,idx)=>{
+              b.addEventListener('click', ()=>{
+                seleccionado = res.lista[idx];
+                $$('#listMulti').style.display='none';
+                pintarResumen(seleccionado);
+                cargarAbonos(seleccionado.numero);
+              });
+            });
+          }
+        },
+        onError:()=>{ btn.disabled=false; btn.textContent=old; setHint('#fbBuscar','Error de conexión.', true); },
+        onTimeout:()=>{ btn.disabled=false; btn.textContent=old; setHint('#fbBuscar','Tiempo agotado.', true); }
+      });
+    });
+
+    // PINTAR RESUMEN (EDITABLE)
+    function pintarResumen(d){
+      setHint('#fbBuscar','');
+      $$('#resumenWrap').style.display='block';
+      
+      // Fijos
+      $$('#r_boleta').textContent   = String(d.numero).padStart(4,'0');
+      $$('#r_tel').textContent      = d.telefono || '—';
+      
+      // Editables
+      $$('#edit_nombre').value   = d.nombre || '';
+      $$('#edit_apellido').value = d.apellido || '';
+      $$('#edit_ciudad').value   = d.ciudad || '';
+
+      $$('#r_total').textContent    = formatoCOP(d.totalAbonos||0);
+      $$('#r_restante').textContent = formatoCOP(d.restante||0);
+
+      $$('#libWrap').style.display='block';
+      $$('#sepLiberar').style.display='block';
+    }
+
+    // GUARDAR CAMBIOS
+    $$('#btnGuardarCambios').addEventListener('click', ()=>{
+        if(!seleccionado || !seleccionado.numero) return;
+        const btn = $$('#btnGuardarCambios');
+        const oldTxt = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Guardando...';
+        
+        const pwd = $$('#c_pwd').value;
+
+        const datosNuevos = {
+            numero: String(seleccionado.numero),
+            nombre: $$('#edit_nombre').value.trim(),
+            apellido: $$('#edit_apellido').value.trim(),
+            ciudad: $$('#edit_ciudad').value.trim(),
+            contrasena: pwd
+        };
+
+        gasPositional('actualizarDatosCliente', [datosNuevos], {
+            onSuccess:(res)=>{
+                btn.disabled = false; btn.textContent = oldTxt;
+                if(res.status === 'ok'){
+                    showToast('Datos actualizados ✅');
+                    seleccionado.nombre = datosNuevos.nombre;
+                    seleccionado.apellido = datosNuevos.apellido;
+                    seleccionado.ciudad = datosNuevos.ciudad;
+                } else {
+                    showToast(res.mensaje || 'Error', 'error');
+                }
+            },
+            onError:()=>{ 
+                btn.disabled = false; btn.textContent = oldTxt; 
+                showToast('Error de conexión', 'error'); 
+            }
+        });
+    });
+
+    // Copiar link
+    $$('#btnCopiar').addEventListener('click', async ()=>{
+      if(!seleccionado || !seleccionado.urlBoleta) return;
+      try{ await navigator.clipboard.writeText(seleccionado.urlBoleta); showToast('Enlace copiado ✓'); }
+      catch{
+        const ta=document.createElement('textarea'); ta.value=seleccionado.urlBoleta; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); ta.remove();
+        showToast('Enlace copiado ✓');
+      }
+    });
+
+    // Cargar abonos
+    function cargarAbonos(numero){
+      $$('#abonosWrap').style.display='block';
+      $$('#sepAbonos').style.display='block';
+      setHint('#fbAbonos','Cargando abonos…');
+      $$('#tblAbonos').innerHTML='';
+
+      gasPositional('listarAbonosDeNumero', [{ numero: String(numero) }], {
+        onSuccess:(r)=>{
+          if(r && Array.isArray(r.lista) && r.lista.length){ pintarTablaAbonos(r.lista); }
+          else { intentarCompat(numero); }
+        },
+        onError:()=>{ intentarCompat(numero); },
+        onTimeout:()=>{ intentarCompat(numero); },
+      });
+
+      function intentarCompat(num){
+        gasPositional('consultarClienteYAbonos', [String(num)], {
+          onSuccess:(res)=>{
+            if(res && res.lista && Array.isArray(res.lista)){ pintarTablaAbonos(res.lista); }
+            else if(res && res.abonos && Array.isArray(res.abonos)){ pintarTablaAbonos(res.abonos); }
+            else fallbackUltimo(num);
+          },
+          onError:fallbackUltimo, onTimeout:fallbackUltimo
+        });
+        function fallbackUltimo(){
+          gasPositional('listarAbonosPorNumero', [String(numero)], {
+            onSuccess:(r)=>{ if(r && Array.isArray(r.lista)){ pintarTablaAbonos(r.lista); } else setHint('#fbAbonos','No hay abonos.'); },
+            onError:()=> setHint('#fbAbonos','No hay abonos.'),
+            onTimeout:()=> setHint('#fbAbonos','No hay abonos.')
+          });
+        }
+      }
+    }
+
+    function pintarTablaAbonos(lista){
+      if(!lista.length){ setHint('#fbAbonos','No hay abonos.'); return; }
+      setHint('#fbAbonos','');
+
+      const rowsHtml = lista.map(a => {
+        const fecha = a.fecha || '';
+        const hora  = a.hora || '';
+        const valor = a.valor ?? a.monto ?? 0;
+        const ref   = a.referencia || '';
+        const metodo= a.metodo || a.plataforma || '';
+        const row   = a.row;
+        const sheet = a.sheet || '';
+        return `
+          <tr data-row="${row}" data-sheet="${sheet}">
+            <td>${fecha || '—'}</td>
+            <td>${hora  || '—'}</td>
+            <td style="font-weight:700; color:#2d5b4f">${formatoCOP(valor)}</td>
+            <td>${ref || '—'}</td>
+            <td>${metodo || '—'}</td>
+            <td style="text-align:center"><button class="cta-danger" data-del="${row}" data-sheet="${sheet}" style="min-width:auto; padding:6px 12px; font-size:0.85rem">Eliminar</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      $$('#tblAbonos').innerHTML = rowsHtml;
+
+      $all('button[data-del]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const row   = Number(btn.dataset.del);
+          const sheet = String(btn.dataset.sheet || '');
+          eliminarAbono(row, sheet, btn);
+        });
+      });
+    }
+
+    // Eliminar abono (CON CONFIRMACIÓN)
+    function eliminarAbono(row, sheet, btnEl){
+      const pwd = $$('#c_pwd').value.trim();
+      if(!pwd){ showToast('Sesión expirada. Recarga.', 'error'); return; }
+      if(!seleccionado || !seleccionado.numero){ setHint('#fbAbonos','Primero busca una boleta.', true); return; }
+
+      // CONFIRMACIÓN
+      pedirConfirmacion(() => {
+          setHint('#fbAbonos','Eliminando…'); 
+          btnEl.disabled = true;
+          const textoOriginal = btnEl.textContent;
+          btnEl.textContent = '...';
+
+          const payload = { sheet, row, numero: String(seleccionado.numero), contrasena: pwd };
+
+          gasPositional('eliminarAbonoPorFila', [payload], {
+            onSuccess:(res)=>{
+              btnEl.disabled = false; btnEl.textContent = textoOriginal;
+              if(res && res.status==='ok'){
+                const tr = document.querySelector(`tr[data-row="${row}"]`);
+                if(tr) tr.remove();
+                setHint('#fbAbonos','Abono eliminado ✅');
+                showToast('Abono eliminado ✓');
+                handleRefresh(); 
+              }else{
+                setHint('#fbAbonos', res?.mensaje || 'No se pudo eliminar el abono.', true);
+                showToast('No se pudo eliminar','error');
+              }
+            },
+            onError:()=>{ 
+                btnEl.disabled=false; btnEl.textContent = textoOriginal;
+                setHint('#fbAbonos','Error de conexión.', true); 
+                showToast('Error de conexión','error'); 
+            },
+            onTimeout:()=>{ 
+                btnEl.disabled=false; btnEl.textContent = textoOriginal;
+                setHint('#fbAbonos','Sin respuesta del servidor.', true); 
+                showToast('Sin respuesta del servidor','error'); 
+            }
+          });
+      });
+    }
+
+    function handleRefresh(){
+      if(!seleccionado || !seleccionado.numero) return;
+      cargarAbonos(seleccionado.numero);
+      gasPositional('handleGetRequest', [{numeroBoleta:String(seleccionado.numero).padStart(4,'0')}], {
+        onSuccess:(res)=>{ if(res && res.status==='encontrado'){ seleccionado = res.datos; pintarResumen(seleccionado); } }
+      });
+    }
+    $$('#lnkRefrescar').addEventListener('click', handleRefresh);
+
+    // Liberar número
+    $$('#btnLiberar').addEventListener('click', ()=>{
+      if(!seleccionado || !seleccionado.numero){
+        setHint('#fbLiberar','No hay boleta seleccionada.', true);
+        return;
+      }
+      const pwd = $$('#c_pwd').value.trim();
+      if(!pwd){
+        showToast('Sesión expirada. Recarga.', 'error');
+        return;
+      }
+
+      if(!confirm("¿Seguro que quieres liberar esta boleta? Esto borrará la venta y todos los abonos.")){ return; }
+
+      setHint('#fbLiberar','Liberando…');
+
+      const payload = { numero: String(seleccionado.numero), contrasena: pwd };
+      gasPositional('liberarNumeroYBorrarVentaYAbonos', [payload], {
+        onSuccess:(res)=>{
+          if(res && res.status==='ok'){
+            setHint('#fbLiberar','Número liberado ✅');
+            showToast('Número liberado ✓');
+            // reset UI
+            seleccionado = null;
+            $$('#c_buscar').value='';
+            $$('#resumenWrap').style.display='none';
+            $$('#abonosWrap').style.display='none'; $$('#sepAbonos').style.display='none';
+            $$('#libWrap').style.display='none'; $$('#sepLiberar').style.display='none';
+            setHint('#fbBuscar','Puedes buscar otro número.');
+          }else{
+            setHint('#fbLiberar', res?.mensaje || 'No se pudo liberar.', true);
+            showToast('No se pudo liberar','error');
+          }
+        },
+        onError:()=>{ setHint('#fbLiberar','Error de conexión.', true); showToast('Error de conexión','error'); },
+        onTimeout:()=>{ setHint('#fbLiberar','Sin respuesta del servidor.', true); showToast('Sin respuesta del servidor','error'); }
+      });
+    });
+    
+    initLogin();
+  </script>
+</body>
+</html>
