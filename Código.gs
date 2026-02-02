@@ -1664,7 +1664,7 @@ function doPost(e) {
   }
 }
 
-// === HELPER: Reorganizar UN cliente después de liberar (VERSIÓN INTELIGENTE PRO) ===
+// === VERSIÓN CORREGIDA: NO TOCA LA COLUMNA A ===
 function _reorganizarClientePostLiberacion(telefono, ns) {
   try {
     const ss = _getSS();
@@ -1695,7 +1695,6 @@ function _reorganizarClientePostLiberacion(telefono, ns) {
         const filaTel = _digits(fila[5]); 
 
         // Verificamos coincidencia (SOLO TELÉFONO)
-        // Ignoramos NS para evitar agrupaciones falsas con "fds"
         const matchTel = (targetTel.length > 6 && filaTel === targetTel);
 
         if (matchTel) {
@@ -1707,34 +1706,42 @@ function _reorganizarClientePostLiberacion(telefono, ns) {
 
     if (misBoletas.length === 0) return;
 
-    // 2. BORRAR TODO LO VIEJO (Para limpiar la casa)
+    // 2. BORRAR TODO LO VIEJO
     filasBorrar.sort((a, b) => {
        if (a.sheet.getName() !== b.sheet.getName()) return 0;
        return b.row - a.row; // De abajo hacia arriba
     });
-    
     filasBorrar.forEach(item => {
        try { item.sheet.deleteRow(item.row); } catch(e){}
     });
 
-    // 3. DECIDIR DÓNDE ESCRIBIR (AQUÍ ESTÁ LA MAGIA)
+    // 3. DECIDIR DÓNDE ESCRIBIR (CORREGIDO)
     misBoletas.sort((a, b) => Number(a[1]) - Number(b[1])); // Ordenar por número
+
+    // Helper para escribir SIN tocar Columna A
+    const escribirSeguro = (hoja, datosFila) => {
+        // datosFila tiene indices 0..13 (A..N). 
+        // Queremos escribir desde B..N (indices 1..13).
+        // .slice(1) corta el primer elemento (Col A)
+        const datosSinA = datosFila.slice(1); 
+        
+        const sigFila = hoja.getLastRow() + 1;
+        // Escribimos desde fila nueva, Columna 2 (B), 1 fila de alto, N columnas de ancho
+        hoja.getRange(sigFila, 2, 1, datosSinA.length).setValues([datosSinA]);
+        
+        // Regenerar fórmulas y formato
+        copiarFormatoUltimaFila(hoja.getName());
+        _inyectarFormulas(hoja, sigFila);
+    };
 
     // === CASO A: LE QUEDA SOLO 1 BOLETA -> MOVER A "VENTAS" ===
     if (misBoletas.length === 1) {
-       // Usamos tu función existente que busca espacio en Ventas 1 o 2
-       let hojaDestino = _pickVentaShardForWrite(); 
-       
-       // Si por alguna razón Ventas está lleno, usamos Varias 1 como emergencia
+       let hojaDestino = _pickVentaShardForWrite();
        if (!hojaDestino) hojaDestino = ss.getSheetByName(VARIAS_SHARDS[0]);
-
+       
        if (hojaDestino) {
-          hojaDestino.appendRow(misBoletas[0]);
-          
-          const nuevaFila = hojaDestino.getLastRow();
-          copiarFormatoUltimaFila(hojaDestino.getName());
-          _inyectarFormulas(hojaDestino, nuevaFila);
-          console.log(`✅ Cliente volvió a ser individual. Boleta movida a: ${hojaDestino.getName()}`);
+          escribirSeguro(hojaDestino, misBoletas[0]);
+          console.log(`✅ Cliente reorganizado a individual en: ${hojaDestino.getName()}`);
        }
     }
     
@@ -1746,14 +1753,10 @@ function _reorganizarClientePostLiberacion(telefono, ns) {
          const shDestino = ss.getSheetByName(nombreDestino);
 
          if (shDestino) {
-           shDestino.appendRow(datos);
-           
-           const nuevaFila = shDestino.getLastRow();
-           copiarFormatoUltimaFila(nombreDestino);
-           _inyectarFormulas(shDestino, nuevaFila);
+           escribirSeguro(shDestino, datos);
          }
        });
-       console.log(`✅ Cliente sigue siendo multi. ${misBoletas.length} boletas reordenadas en Varias.`);
+       console.log(`✅ Cliente multi reordenado (${misBoletas.length} boletas).`);
     }
 
   } catch (e) {
