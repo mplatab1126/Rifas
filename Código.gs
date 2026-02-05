@@ -135,15 +135,10 @@ function _getAllBoletaSheets() {
   return hojas;
 }
 
-// === MODIFICADO: CONECTAR AL BANCO CENTRAL ===
-// Todas las hojas de transferencias del ARCHIVO EXTERNO
 function _getAllTransferSheets(){
-  // Abre el archivo externo usando el ID nuevo
-  const ssExterna = SpreadsheetApp.openById(ID_CENTRAL_TRANSFERENCIAS);
-  // Busca las hojas que empiecen por TRANSFERENCIAS dentro de ese archivo externo
-  return ssExterna.getSheets().filter(s => /^TRANSFERENCIAS(\s*\d+)?$/i.test(s.getName()));
+  const ssExterna = SpreadsheetApp.openById(ID_CENTRAL_TRANSFERENCIAS);
+  return ssExterna.getSheets().filter(s => /^TRANSFERENCIAS.*$/i.test(s.getName()));
 }
-// =============================================
 
 // ========== SHARDS: VENTAS ==========
 function _getAllVentaSheets(){ return VENTAS_SHARDS.map(n=>_getSheet(n)); }
