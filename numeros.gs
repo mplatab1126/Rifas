@@ -157,26 +157,31 @@ function actualizarOrganizados(){
 }
 
 /**
- * Inicializa solo RANDOM (E2:E51)
+ * Inicializa RANDOM (E2:E51) y RANDOM 2 (F2:F51)
+ * - Busca números disponibles (no VENDIDO)
+ * - Llena Columna E con 50 números
+ * - Llena Columna F con OTROS 50 números (sin repetir los de la E)
  */
 function inicializarListaRandom(){
   const hojaNumeros = n_getSheet("NUMEROS");
-  n_getSheet("NUMEROS CHATEA"); 
+  n_getSheet("NUMEROS CHATEA"); // Asegura que existe la hoja auxiliar
 
   const last = hojaNumeros.getLastRow();
+  
+  // Limpiamos las columnas E y F antes de empezar
+  n_clearAndFillColumn(hojaNumeros, 5, 2, 50, []); // Limpiar E
+  n_clearAndFillColumn(hojaNumeros, 6, 2, 50, []); // Limpiar F
+
   if(last<2){ 
-    n_clearAndFillColumn(hojaNumeros, 5, 2, 50, []); // E2:E51
     actualizarOrganizados();
-    return; 
+    return;
   }
 
   // Filtra SOLO disponibles (no VENDIDO)
-  const datos = hojaNumeros.getRange(2,1,last-1,2).getValues(); 
+  const datos = hojaNumeros.getRange(2,1,last-1,2).getValues();
   const disponibles = datos
     .filter(([n,estado]) => n && String(estado||"").trim()!=="VENDIDO")
     .map(([n])=>n_pad4(n));
-
-  n_clearAndFillColumn(hojaNumeros, 5, 2, 50, []); // Limpiar E
 
   if(disponibles.length === 0){
     actualizarOrganizados();
@@ -184,84 +189,57 @@ function inicializarListaRandom(){
     return;
   }
 
-  // RANDOM (E): hasta 50 únicos
-  const takeE = Math.min(50, disponibles.length);
-  const r1 = n_pickUniqueRandom(disponibles, takeE).sort((a,b)=>Number(a)-Number(b));
+  // --- CAMBIO CLAVE: Pedimos 100 números de una vez ---
+  // Así aseguramos que los de la lista 2 no se repitan con la lista 1
+  const totalNecesario = 100;
+  const mezclados = n_pickUniqueRandom(disponibles, totalNecesario);
 
-  // Escribir
-  n_clearAndFillColumn(hojaNumeros, 5, 2, 50, r1); // E
-  
-  // LIMPIEZA DE LA COLUMNA F (Por si acaso queda basura antigua)
-  hojaNumeros.getRange(2, 6, 50, 1).clearContent(); 
+  // Repartimos: 0-49 para RANDOM 1, 50-99 para RANDOM 2
+  const r1 = mezclados.slice(0, 50).sort((a,b)=>Number(a)-Number(b));
+  const r2 = mezclados.slice(50, 100).sort((a,b)=>Number(a)-Number(b));
 
+  // Escribir en Columna E (5) - RANDOM 1
+  if (r1.length > 0) {
+    n_clearAndFillColumn(hojaNumeros, 5, 2, 50, r1);
+  }
+
+  // Escribir en Columna F (6) - RANDOM 2
+  if (r2.length > 0) {
+    n_clearAndFillColumn(hojaNumeros, 6, 2, 50, r2);
+  }
+
+  // Actualizamos el resumen
   actualizarOrganizados();
-  Logger.log(`✅ RANDOM inicializado con ${r1.length} números.`);
+  Logger.log(`✅ RANDOM actualizado: ${r1.length} en Col E y ${r2.length} en Col F.`);
 }
 
 // ======================================================
 // ACTUALIZADOR DE INVENTARIO (CON RESET)
 // ======================================================
 
-function actualizarEstadoNumeros() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const shNumeros = ss.getSheetByName("NUMEROS");
+/** * Refresca texto organizado en "NUMEROS CHATEA":
+ * - B2: Lista de la Columna E (Random 1)
+ * - B3: Lista de la Columna F (Random 2)
+ */
+function actualizarOrganizados(){
+  const hojaNumeros = n_getSheet("NUMEROS");
+  const hojaChatea  = n_getSheet("NUMEROS CHATEA");
+
+  // 1. Procesar LISTA RANDOM 1 (Columna E -> índice 5)
+  const rand1 = hojaNumeros.getRange(2, 5, 50, 1).getValues().flat()
+    .filter(n => n != null && String(n).trim() !== "")
+    .map(n => n_pad4(n))
+    .sort((a, b) => Number(a) - Number(b));
   
-  if (!shNumeros) { console.error("No se encontró la hoja NUMEROS"); return; }
+  // 2. Procesar LISTA RANDOM 2 (Columna F -> índice 6)
+  const rand2 = hojaNumeros.getRange(2, 6, 50, 1).getValues().flat()
+    .filter(n => n != null && String(n).trim() !== "")
+    .map(n => n_pad4(n))
+    .sort((a, b) => Number(a) - Number(b));
 
-  // 1. OBTENER LISTA DE NÚMEROS (Columna A)
-  const lastRow = shNumeros.getLastRow();
-  if (lastRow < 2) return;
-  
-  // Leemos los números (Col A)
-  const rangoNumeros = shNumeros.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const listaNumeros = rangoNumeros.map(n => Number(n));
-
-  // 2. RECOLECTAR NÚMEROS VENDIDOS DE TODAS LAS HOJAS
-  // CORREGIDO: Listas nuevas
-  const listaVentas = (typeof VENTAS_SHARDS !== 'undefined' ? VENTAS_SHARDS : ["V1", "V2"]);
-  const listaVarias = (typeof VARIAS_SHARDS !== 'undefined' ? VARIAS_SHARDS : [
-    "VB1", "VB2", "VB3", "VB4", "VB5", "VB6", "VB7", "VB8", "VB9", "VB10"
-  ]);
-  
-  const hojasBusqueda = listaVentas.concat(listaVarias);
-  
-  let vendidosSet = new Set();
-
-  hojasBusqueda.forEach(nombreHoja => {
-    const sh = ss.getSheetByName(nombreHoja);
-    if (sh && sh.getLastRow() > 1) {
-      // EN LA NUEVA ESTRUCTURA, EL NÚMERO DE BOLETA ES LA COLUMNA B (2)
-      const datos = sh.getRange(2, 2, sh.getLastRow() - 1, 1).getValues().flat();
-      datos.forEach(d => {
-        let valor = Number(d);
-        if (!isNaN(valor) && valor !== 0) {
-          vendidosSet.add(valor);
-        }
-      });
-    }
-  });
-
-  // 3. PREPARAR LOS CAMBIOS (ESTADO Y COLOR)
-  const estados = [];
-  const colores = [];
-
-  for (let i = 0; i < listaNumeros.length; i++) {
-    let numeroActual = listaNumeros[i];
-    
-    if (vendidosSet.has(numeroActual)) {
-      // Si está en la lista de vendidos
-      estados.push(["VENDIDO"]);
-      colores.push(["#ea9999"]); // Rojo claro
-    } else {
-      // Si NO está vendido (Reset a disponible)
-      estados.push(["DISPONIBLE"]);
-      colores.push(["#ffffff"]); // Blanco
-    }
-  }
-
-  // 4. ESCRIBIR EN LA HOJA DE UNA SOLA VEZ (OPTIMIZADO)
-  shNumeros.getRange(2, 2, estados.length, 1).setValues(estados);
-  shNumeros.getRange(2, 1, colores.length, 1).setBackgrounds(colores);
-
-  console.log("✅ Inventario actualizado correctamente.");
+  // 3. Escribir en la hoja auxiliar
+  // Lista 1 en B2
+  hojaChatea.getRange("B2").setValue(rand1.join(" - "));
+  // Lista 2 en B3
+  hojaChatea.getRange("B3").setValue(rand2.join(" - "));
 }
